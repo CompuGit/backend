@@ -1,0 +1,6 @@
+Flask==3.1.1
+Flask_Swagger==0.2.14
+Flask_Swagger_UI==4.11.1
+python-dotenv==1.1.1
+PyYAML==6.0.2
+gunicorn==21.2.0

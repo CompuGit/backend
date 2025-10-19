@@ -1,0 +1,1 @@
+# Basic Flask app settings - no CORS, auth, or database configuration needed
