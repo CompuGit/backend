@@ -3,12 +3,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app import app
+from app.applogger import logger
 import os
 import sys
 
 if __name__ == '__main__':
-    print("Starting Backend app ...")
-
+    logger.info("Starting Backend app ...")
+    
     if (len(sys.argv) > 1 and sys.argv[1] == '--prod') or os.getenv('ENV') == 'prod':
         # Production mode with Gunicorn
         from gunicorn.app.base import BaseApplication
