@@ -6,6 +6,7 @@ import os
 from app.applogger import logger
 from app.default_routes import register_default_routes
 from app.routes import register_routes
+from app.database import get_database
 from flask_swagger import swagger
 from app.settings import enable_cors, cors_config
 
@@ -26,6 +27,14 @@ swag = swagger(app)
 # In-memory storage for demo can access them via `current_app` at runtime and avoid circular imports.
 app.users_db = {}
 app.blacklisted_tokens = set()
+
+# Initialize database and attach to app as `app.db`.
+# If database initialization fails, fall back to in-memory `app.users_db` for compatibility.
+try:
+    app.db = get_database()
+except Exception:
+    logger.warning("Database initialization failed; falling back to in-memory store")
+    app.db = None
 
 # JWT token blacklist checker
 @jwt.token_in_blocklist_loader

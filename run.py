@@ -42,3 +42,15 @@ if __name__ == '__main__':
             port=int(os.getenv('PORT',5000)), 
             debug=eval(os.getenv('DEBUG','False').title())
         )
+
+'''
+api auth -done
+logger -done
+env -done
+routes
+swagger
+gunicorn
+dockerfile
+structured dir / modular
+
+'''

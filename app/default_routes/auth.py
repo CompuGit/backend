@@ -13,36 +13,42 @@ def register():
     try:
         data = request.get_json()
 
-        if not data or not data.get('email') or not data.get('password'):
+        if not data or not data.get('userName') or not data.get('password'):
             logger.error("Missing required fields in registration")
             return jsonify({
                 'error': 'Missing required fields',
-                'message': 'Email and password are required'
+                'message': 'Username and password are required'
             }), 400
 
-        email = data['email'].lower().strip()
+        userName = data['userName'].lower().strip()
         password = data['password']
 
-        users_db = current_app.users_db
+        # Prefer configured database; fallback to in-memory store for development
+        db = current_app.db
+        if db:
+            existing = db.get_user_by_email_or_username_or_userId(userName)
+            if existing:
+                logger.error("User already exists: %s", userName)
+                return jsonify({
+                    'error': 'User already exists',
+                    'message': 'userName is already registered'
+                }), 409
+            
+            data['password_hash']  = generate_password_hash(password)
+            del data['password']
+            db.create_user(data)
 
-        if email in users_db:
-            logger.error("User already exists: %s", email)
+            logger.info("User registered successfully: %s", userName)
             return jsonify({
-                'error': 'User already exists',
-                'message': 'Email is already registered'
-            }), 409
-
-        users_db[email] = {
-            'email': email,
-            'password_hash': generate_password_hash(password),
-            'created_at': datetime.utcnow().isoformat()
-        }
-
-        logger.info("User registered successfully: %s", email)
-        return jsonify({
-            'message': 'User registered successfully',
-            'email': email
-        }), 201
+                'message': 'User registered successfully',
+                'userName': userName
+            }), 201
+        else:
+            logger.warning("/auth/register - No database configured")
+            return jsonify({
+                'error': 'No database configured',
+                'message': 'User registration is not available'
+            }), 503
 
     except Exception as e:
         logger.error("Registration failed: %s", str(e))
@@ -57,39 +63,53 @@ def login():
     try:
         data = request.get_json()
 
-        if not data or not data.get('email') or not data.get('password'):
+        if not data or not data.get('userName') or not data.get('password'):
             logger.error("Missing credentials in login")
             return jsonify({
                 'error': 'Missing credentials',
-                'message': 'Email and password are required'
+                'message': 'userName and password are required'
             }), 400
 
-        email = data['email'].lower().strip()
+        userName = data['userName'].lower().strip()
         password = data['password']
 
-        users_db = current_app.users_db
-        user = users_db.get(email)
+        db = current_app.db
+        if db:
+            user = db.get_user_by_email_or_username_or_userId(userName)
 
-        if not user or not check_password_hash(user['password_hash'], password):
-            logger.error("Invalid login attempt for user: %s", email)
+            if not user or user.get('canLogin') is False:
+                logger.error("Login attempt for non-existent or disabled user: %s", userName)
+                return jsonify({
+                    'error': 'User cannot login',
+                    'message': 'userName does not exist or is disabled'
+                }), 401
+
+            if not user or not check_password_hash(user['password_hash'], password):
+                logger.error("Invalid login attempt for user: %s", userName)
+                return jsonify({
+                    'error': 'Invalid credentials',
+                    'message': 'userName or password is incorrect'
+                }), 401
+
+            access_token = create_access_token(identity=userName)
+            refresh_token = create_refresh_token(identity=userName)
+
+            logger.info("User logged in successfully: %s", userName)
             return jsonify({
-                'error': 'Invalid credentials',
-                'message': 'Email or password is incorrect'
-            }), 401
-
-        access_token = create_access_token(identity=email)
-        refresh_token = create_refresh_token(identity=email)
-
-        logger.info("User logged in successfully: %s", email)
-        return jsonify({
-            'message': 'Login successful',
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'user': {
-                'email': email,
-                'created_at': user['created_at']
-            }
-        }), 200
+                'message': 'Login successful',
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'user': {
+                    'userName': userName,
+                    'created_at': user.get('created_at') if isinstance(user, dict) else None
+                }
+            }), 200
+        else:
+            logger.warning("No database configured, using in-memory store")
+            return jsonify({
+                'error': 'No database configured',
+                'message': 'Login is not available'
+            }), 503
 
     except Exception as e:
         logger.error("Login failed: %s", str(e))
@@ -100,6 +120,15 @@ def login():
 @jwt_required(refresh=True)
 def refresh():
     try:
+        # Check if the refresh token is blacklisted
+        jti = get_jwt()['jti']
+        if jti in current_app.blacklisted_tokens:
+            logger.warning("Attempted to use blacklisted refresh token: %s", jti)
+            return jsonify({
+                'error': 'Token invalid',
+                'message': 'Refresh token has been revoked'
+            }), 401
+
         current_user = get_jwt_identity()
         new_token = create_access_token(identity=current_user)
 
@@ -121,13 +150,29 @@ def refresh():
 @jwt_required()
 def logout():
     try:
-        jti = get_jwt()['jti']
-        # Attach blacklisted tokens to the app instance
+        # Get the current access token's jti
+        access_jti = get_jwt()['jti']
         blacklisted = current_app.blacklisted_tokens
-        blacklisted.add(jti)
-
-        logger.info("User logged out, token revoked: %s", jti)
-        return jsonify({'message': 'Successfully logged out'}), 200
+        blacklisted.add(access_jti)
+        
+        # Check if refresh token is provided in request body to blacklist it too
+        data = request.get_json()
+        if data and data.get('refresh_token'):
+            try:
+                from flask_jwt_extended import decode_token
+                refresh_token_data = decode_token(data['refresh_token'])
+                refresh_jti = refresh_token_data['jti']
+                blacklisted.add(refresh_jti)
+                logger.info("Both access and refresh tokens revoked for logout")
+                message = 'Successfully logged out. Both tokens have been revoked.'
+            except Exception as token_error:
+                logger.warning("Failed to decode refresh token during logout: %s", str(token_error))
+                message = 'Successfully logged out. Access token revoked, but refresh token could not be processed.'
+        else:
+            message = 'Successfully logged out. Access token revoked. Please discard your refresh token on the client side.'
+        
+        logger.info("User logged out, access token revoked: %s", access_jti)
+        return jsonify({'message': message}), 200
 
     except Exception as e:
         logger.error("Logout failed: %s", str(e))
