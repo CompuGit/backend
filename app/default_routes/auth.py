@@ -180,3 +180,48 @@ def logout():
             'error': 'Logout failed',
             'message': str(e)
         }), 500
+
+@auth_bp.route('/pwupdate', methods=['POST'])
+@jwt_required()
+def change_password():
+    try:
+        data = request.get_json()
+        if not data or not data.get('oldPassword') or not data.get('newPassword'):
+            logger.error("Missing fields in change password request")
+            return jsonify({
+                'error': 'Missing fields',
+                'message': 'oldPassword and newPassword are required'
+            }), 400
+
+        current_user = get_jwt_identity()
+        db = current_app.db
+        if db:
+            user = db.get_user_by_email_or_username_or_userId(current_user)
+
+            if not user or not check_password_hash(user['password_hash'], data['oldPassword']):
+                logger.error("Invalid current password for user: %s", current_user)
+                return jsonify({
+                    'error': 'Invalid current password',
+                    'message': 'The old password is incorrect'
+                }), 401
+
+            new_password_hash = generate_password_hash(data['newPassword'])
+            db.update_user(user['userId'],{'password_hash': new_password_hash})
+
+            logger.info("Password changed successfully for user: %s", current_user)
+            return jsonify({
+                'message': 'Password changed successfully'
+            }), 200
+        else:
+            logger.warning("No database configured for change password")
+            return jsonify({
+                'error': 'No database configured',
+                'message': 'Change password is not available'
+            }), 503
+
+    except Exception as e:
+        logger.error("Change password failed: %s", str(e))
+        return jsonify({
+            'error': 'Change password failed',
+            'message': str(e)
+        }), 500
