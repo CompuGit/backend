@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (create_access_token, create_refresh_token,
-                                jwt_required, get_jwt_identity, get_jwt)
-from datetime import datetime
-from app.applogger import logger
+                                jwt_required, get_jwt)
+from app.core.auth.n import current_identity
+from app.core.logging import logger
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -24,7 +24,7 @@ def register():
         password = data['password']
 
         # Prefer configured database; fallback to in-memory store for development
-        db = current_app.db
+        db = current_app.extensions["database"]
         if db:
             existing = db.get_user_by_email_or_username_or_userId(userName)
             if existing:
@@ -63,17 +63,17 @@ def login():
     try:
         data = request.get_json()
 
-        if not data or not data.get('userName') or not data.get('password'):
+        if not data or not data.get('username') or not data.get('password'):
             logger.error("Missing credentials in login")
             return jsonify({
                 'error': 'Missing credentials',
-                'message': 'userName and password are required'
+                'message': 'username and password are required'
             }), 400
 
-        userName = data['userName'].lower().strip()
+        userName = data['username'].lower().strip()
         password = data['password']
 
-        db = current_app.db
+        db = current_app.extensions["database"]
         if db:
             user = db.get_user_by_email_or_username_or_userId(userName)
 
@@ -122,14 +122,14 @@ def refresh():
     try:
         # Check if the refresh token is blacklisted
         jti = get_jwt()['jti']
-        if jti in current_app.blacklisted_tokens:
+        if jti in current_app.extensions["blacklisted_tokens"]:
             logger.warning("Attempted to use blacklisted refresh token: %s", jti)
             return jsonify({
                 'error': 'Token invalid',
                 'message': 'Refresh token has been revoked'
             }), 401
 
-        current_user = get_jwt_identity()
+        current_user = current_identity()
         new_token = create_access_token(identity=current_user)
 
         logger.info("Token refreshed for user: %s", current_user)
@@ -152,7 +152,7 @@ def logout():
     try:
         # Get the current access token's jti
         access_jti = get_jwt()['jti']
-        blacklisted = current_app.blacklisted_tokens
+        blacklisted = current_app.extensions["blacklisted_tokens"]
         blacklisted.add(access_jti)
         
         # Check if refresh token is provided in request body to blacklist it too
@@ -193,8 +193,8 @@ def change_password():
                 'message': 'oldPassword and newPassword are required'
             }), 400
 
-        current_user = get_jwt_identity()
-        db = current_app.db
+        current_user = current_identity()
+        db = current_app.extensions["database"]
         if db:
             user = db.get_user_by_email_or_username_or_userId(current_user)
 

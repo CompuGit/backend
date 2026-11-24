@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, current_app, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from werkzeug.security import generate_password_hash
 
-from app.applogger import logger
+from app.core.auth.n import current_identity
+from app.core.logging import logger
 
 users_bp = Blueprint('users', __name__)
 
@@ -11,11 +12,11 @@ users_bp = Blueprint('users', __name__)
 def get_profile():
     logger.info("/users/profile endpoint called")
     try:
-        current_user = get_jwt_identity()
-        db = current_app.db
+        current_user = current_identity()
+        db = current_app.extensions["user_service"]
 
-        if hasattr(db, 'get_user_by_email_or_username_or_userId'):
-            user_data = db.get_user_by_email_or_username_or_userId(current_user)
+        if db.supports('get_user_by_email_or_username_or_userId'):
+            user_data = db.get_user(current_user)
             if not user_data:
                 return jsonify({
                     'error': 'User not found',
@@ -50,9 +51,9 @@ def list_users():
 
     try:
         users_list = []
-        db = current_app.db
-        if hasattr(db, 'get_all_users'):
-            for u in db.get_all_users(filters=filters):
+        db = current_app.extensions["user_service"]
+        if db.supports('get_all_users'):
+            for u in db.list_users(filters=filters):
                 if u['userId'] == 10000 or u.get('userName','').lower() == 'admin':
                     continue  # Skip admin user
                 del u['password_hash']
@@ -81,10 +82,10 @@ def get_user(userId:int):
     userId = int(userId)
     logger.info("/users/%s GET endpoint called", userId)
     try:
-        db = current_app.db
+        db = current_app.extensions["user_service"]
         
-        if hasattr(db, 'get_user_by_email_or_username_or_userId'):
-            user_data = db.get_user_by_email_or_username_or_userId(userId)
+        if db.supports('get_user_by_email_or_username_or_userId'):
+            user_data = db.get_user(userId)
             if not user_data:
                 return jsonify({
                     'error': 'User not found',
@@ -133,11 +134,11 @@ def update_user(userId:int):
             if field in update_data:
                 del update_data[field]
 
-        db = current_app.db
+        db = current_app.extensions["user_service"]
         
-        if hasattr(db, 'get_user_by_email_or_username_or_userId') and hasattr(db, 'update_user'):
+        if db.supports('get_user_by_email_or_username_or_userId') and db.supports('update_user'):
             # First check if user exists
-            existing_user = db.get_user_by_email_or_username_or_userId(userId)
+            existing_user = db.get_user(userId)
             if not existing_user:
                 return jsonify({
                     'error': 'User not found',
@@ -179,11 +180,11 @@ def delete_user(userId:int):
     userId = int(userId)
     logger.info("/users/%s DELETE endpoint called", userId)
     try:
-        db = current_app.db
+        db = current_app.extensions["user_service"]
         
-        if hasattr(db, 'get_user_by_email_or_username_or_userId') and hasattr(db, 'delete_user'):
+        if db.supports('get_user_by_email_or_username_or_userId') and db.supports('delete_user'):
             # First check if user exists
-            existing_user = db.get_user_by_email_or_username_or_userId(userId)
+            existing_user = db.get_user(userId)
             if not existing_user:
                 return jsonify({
                     'error': 'User not found',
@@ -245,11 +246,11 @@ def create_user():
         
         userName = data['userName'].lower().strip()
 
-        db = current_app.db
+        db = current_app.extensions["user_service"]
         
-        if hasattr(db, 'get_user_by_email_or_username_or_userId') and hasattr(db, 'create_user'):
+        if db.supports('get_user_by_email_or_username_or_userId') and db.supports('create_user'):
             # Check if user already exists
-            existing_user = db.get_user_by_email_or_username_or_userId(userName)
+            existing_user = db.get_user(userName)
             if existing_user:
                 return jsonify({
                     'error': 'User already exists',

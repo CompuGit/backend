@@ -1,22 +1,23 @@
-import os
-from typing import Optional
+from typing import Any, Mapping, Optional
 
+from app.core.logging import logger
 from app.database.mongodb import MongoDBConnection
-from app.database.sqlalchemy_db import SQLAlchemyConnection
-from app.applogger import logger
+from app.database.sqlalchemy import SQLAlchemyConnection
 
-def get_database() -> Optional[MongoDBConnection | SQLAlchemyConnection]:
+
+def get_database(config: Optional[Mapping[str, Any]] = None) -> MongoDBConnection | SQLAlchemyConnection:
     """
     Factory function to get the appropriate database connection based on environment configuration.
     Returns either MongoDBConnection or SQLAlchemyConnection instance.
     """
-    db_type = os.getenv('DB_TYPE', 'mongodb').lower()
+    settings = config or {}
+    db_type = str(settings.get("DB_TYPE", "mongodb")).lower()
     
     try:
         if db_type == 'mongodb':
-            db = MongoDBConnection()
+            db = MongoDBConnection(settings)
         elif db_type == 'postgresql':
-            db = SQLAlchemyConnection()
+            db = SQLAlchemyConnection(settings)
         else:
             logger.error(f"Unsupported database type: {db_type}")
             raise ValueError(f"Unsupported database type: {db_type}")

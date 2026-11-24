@@ -4,17 +4,18 @@ import pymongo
 from datetime import datetime
 
 from app.database.interface import DatabaseInterface
-from app.applogger import logger
+from app.core.logging import logger
 
 class MongoDBConnection(DatabaseInterface):
-    def __init__(self):
+    def __init__(self, config=None):
         self.client = None
         self.db = None
         self.users_collection = None
-        self.uri = os.getenv('DB_URI', 'mongodb://localhost:27017')
-        self.db_name = os.getenv('DB_NAME', 'compugit')
-        self.username = os.getenv('DB_USERNAME')
-        self.password = os.getenv('DB_PASSWORD')
+        settings = config or {}
+        self.uri = settings.get('DB_URI') or os.getenv('DB_URI', 'mongodb://localhost:27017')
+        self.db_name = settings.get('DB_NAME') or os.getenv('DB_NAME', 'compugit')
+        self.username = settings.get('DB_USERNAME') or os.getenv('DB_USERNAME')
+        self.password = settings.get('DB_PASSWORD') or os.getenv('DB_PASSWORD')
 
     def connect(self) -> None:
         try:

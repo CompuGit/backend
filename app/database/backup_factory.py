@@ -1,7 +1,7 @@
 import os
 from typing import Optional, Union, Dict, Any
 from app.database.mongodb_br import MongoDBBackup, MongoDBRestore, check_mongodb_tools, validate_mongodb_tools
-from app.applogger import logger
+from app.core.logging import logger
 
 
 class BackupFactory:

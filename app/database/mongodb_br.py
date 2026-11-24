@@ -8,7 +8,7 @@ import pymongo
 from bson import json_util
 import json
 
-from app.applogger import logger
+from app.core.logging import logger
 
 
 def check_mongodb_tools() -> Dict[str, bool]:

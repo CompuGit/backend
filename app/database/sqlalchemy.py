@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database.interface import DatabaseInterface
-from app.applogger import logger
+from app.core.logging import logger
 
 Base = declarative_base()
 
@@ -19,12 +19,16 @@ class UserModel(Base):
     updated_at = Column(DateTime, nullable=True)
 
 class SQLAlchemyConnection(DatabaseInterface):
-    def __init__(self):
+    def __init__(self, config=None):
         self.engine = None
         self.Session = None
         self._session = None
-        self.db_url = os.getenv('DB_URI', 'postgresql://postgres:postgres@localhost:5432') + \
-                        '/' + os.getenv('DB_NAME', 'compugit')
+        settings = config or {}
+        db_uri = settings.get('DB_URI') or os.getenv(
+            'DB_URI', 'postgresql://postgres:postgres@localhost:5432'
+        )
+        db_name = settings.get('DB_NAME') or os.getenv('DB_NAME', 'compugit')
+        self.db_url = f"{db_uri.rstrip('/')}/{db_name}"
 
     def connect(self) -> None:
         try:

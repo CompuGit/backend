@@ -9,9 +9,9 @@ except ImportError:
     powertools_logger = None
     USE_POWETOOLS = False
 
-# When this module lives in `app/`, use its parent directory as project root
+# The project root is two levels above this module.
 module_dir = os.path.dirname(__file__)
-project_root = os.path.abspath(os.path.join(module_dir, os.pardir))
+project_root = os.path.abspath(os.path.join(module_dir, os.pardir, os.pardir))
 
 # Allow overriding LOG_DIR via environment, otherwise keep logs/ at project root
 LOG_DIR = os.getenv('LOG_DIR', os.path.join(project_root, 'logs'))
