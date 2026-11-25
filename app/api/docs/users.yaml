@@ -1,0 +1,203 @@
+paths:
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Requires the admin role. Results are paginated.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Users returned
+        "400":
+          description: Invalid query parameters
+        "401":
+          description: Access token is missing or invalid
+        "403":
+          description: Admin role is required
+    post:
+      tags: [Users]
+      summary: Create a user
+      description: Requires the admin role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+        "400":
+          description: Invalid request or password
+        "401":
+          description: Access token is missing or invalid
+        "403":
+          description: Admin role is required
+        "409":
+          description: Username or email is already in use
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get the current user's profile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User profile returned
+        "401":
+          description: Access token is missing or invalid
+        "404":
+          description: User profile not found
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Users]
+      summary: Get a user by ID
+      description: Requires the admin role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User returned
+        "401":
+          description: Access token is missing or invalid
+        "403":
+          description: Admin role is required
+        "404":
+          description: User not found
+    put:
+      tags: [Users]
+      summary: Update a user by ID
+      description: Requires the admin role. Only documented user fields can be changed.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                userName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                contact:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+                canLogin:
+                  type: boolean
+                departments:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: User updated
+        "400":
+          description: Invalid request
+        "401":
+          description: Access token is missing or invalid
+        "403":
+          description: Admin role is required
+        "404":
+          description: User not found
+        "409":
+          description: Duplicate identity or last administrator constraint
+    patch:
+      tags: [Users]
+      summary: Partially update a user by ID
+      description: Requires the admin role. Only documented user fields can be changed.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                userName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                contact:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+                canLogin:
+                  type: boolean
+                departments:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: User updated
+        "400":
+          description: Invalid request
+        "401":
+          description: Access token is missing or invalid
+        "403":
+          description: Admin role is required
+        "404":
+          description: User not found
+        "409":
+          description: Duplicate identity or last administrator constraint
+    delete:
+      tags: [Users]
+      summary: Delete a user by ID
+      description: Requires the admin role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User deleted
+        "401":
+          description: Access token is missing or invalid
+        "403":
+          description: Admin role is required
+        "404":
+          description: User not found
+        "409":
+          description: The last administrator cannot be deleted

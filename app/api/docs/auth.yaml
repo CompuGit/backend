@@ -1,0 +1,86 @@
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+        "400":
+          description: Invalid request or password
+        "403":
+          description: Public registration is disabled
+        "429":
+          description: Registration rate limit exceeded
+        "409":
+          description: Username or email is already registered
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in and issue access and refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+        "400":
+          description: Credentials are missing
+        "401":
+          description: Credentials are invalid
+        "429":
+          description: Login rate limit exceeded
+        "503":
+          description: Authentication service is unavailable
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Issue a new access token
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Access and rotated refresh tokens issued
+        "401":
+          description: Refresh token is invalid or revoked
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke all sessions for the current user
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: All sessions revoked
+        "401":
+          description: Access token is missing or invalid
+  /auth/pwupdate:
+    post:
+      tags: [Authentication]
+      summary: Change the current user's password
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordUpdateRequest"
+      responses:
+        "200":
+          description: Password changed
+        "400":
+          description: Invalid request or new password
+        "401":
+          description: Current password is incorrect
+        "503":
+          description: Authentication state is unavailable

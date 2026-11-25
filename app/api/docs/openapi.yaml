@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+  title: CompuGit Backend
+  version: 1.0.0
+  description: CompuGit Backend API
+servers:
+  - url: /
+    description: Current server
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Users
+  - name: Backup
+x-route-doc-files:
+  - health.yaml
+  - auth.yaml
+  - users.yaml
+  - backup.yaml
+paths: {}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Welcome:
+      type: object
+      properties:
+        status:
+          type: string
+          example: OK
+        message:
+          type: string
+    RegisterRequest:
+      type: object
+      required: [userName, email, password]
+      properties:
+        userName:
+          type: string
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 12
+      additionalProperties: false
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    PasswordUpdateRequest:
+      type: object
+      required: [oldPassword, newPassword]
+      properties:
+        oldPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+    CreateUserRequest:
+      type: object
+      required: [userName, email, password]
+      properties:
+        userName:
+          type: string
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 12
+        roles:
+          type: array
+          items:
+            type: string
+        canLogin:
+          type: boolean
+      additionalProperties: false

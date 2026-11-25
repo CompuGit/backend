@@ -1,44 +1,20 @@
 from dotenv import load_dotenv
-# Load environment variables
+
 load_dotenv()
 
-from app import app
-from app.applogger import logger
 import os
-import sys
+from pathlib import Path
 
-if __name__ == '__main__':
-    logger.info("Starting Backend app ...")
-    
-    if (len(sys.argv) > 1 and sys.argv[1] == '--prod') or os.getenv('ENV') == 'prod':
-        # Production mode with Gunicorn
-        from gunicorn.app.base import BaseApplication
+from app import create_app
 
-        class GunicornApplication(BaseApplication):
-            def __init__(self, app, options=None):
-                self.options = options or {}
-                self.application = app
-                super().__init__()
+os.environ.setdefault("APP_NAME", os.getenv("APP_NAME", "Compugit_Python_REST_API"))
+version_file = Path(__file__).with_name("VERSION")
+os.environ.setdefault("VERSION", os.getenv("VERSION", version_file.read_text().strip()))
 
-            def load_config(self):
-                for key, value in self.options.items():
-                    if key in self.cfg.settings and value is not None:
-                        self.cfg.set(key, value)
-
-            def load(self):
-                return self.application
-
-        options = {
-            'bind': f"{os.getenv('HOST','0.0.0.0')}:{os.getenv('PORT','5000')}",
-            'workers': 3,
-            'worker_class': 'sync',
-            'timeout': 30
-        }
-        GunicornApplication(app, options).run()
-    else:
-        # Development mode with Flask
-        app.run(
-            host=os.getenv('HOST','0.0.0.0'), 
-            port=int(os.getenv('PORT',5000)), 
-            debug=eval(os.getenv('DEBUG','False').title())
-        )
+if __name__ == "__main__":
+    app = create_app()
+    app.run(
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "5000")),
+        debug=os.getenv("DEBUG", "False").lower() in {"true", "1", "yes", "on"},
+    )
