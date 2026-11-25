@@ -10,7 +10,7 @@ from app.core.errors import register_error_handlers
 from app.core.extensions import cors, jwt
 from app.core.middleware import register_middleware
 from app.core.swagger import register_swagger
-from app.database import get_database
+from app.database import get_cache, get_databases
 
 
 def create_app(
@@ -22,6 +22,18 @@ def create_app(
     app.config.from_mapping(settings.to_flask_config())
     if config:
         app.config.update(config)
+        if "DATABASES" in config:
+            configured_databases = config["DATABASES"]
+            if "PRIMARY_DATABASE" not in config and configured_databases:
+                app.config["PRIMARY_DATABASE"] = next(
+                    (
+                        str(name).lower()
+                        for name, database_config in configured_databases.items()
+                        if isinstance(database_config, Mapping)
+
+                    ),
+                    "",
+                )
 
     if app.config["ENV"] == "prod" and not app.config["JWT_SECRET_KEY"]:
         raise ValueError("SECRET_KEY must be configured in production")
@@ -33,12 +45,18 @@ def create_app(
 
     app.extensions["blacklisted_tokens"] = set()
     if database is None:
-        database = get_database(app.config)
-    app.extensions["database"] = database
-    app.extensions["user_service"] = UserService(database)
+        databases = get_databases(app.config)
+        pm_db = databases[app.config["PRIMARY_DATABASE"]]
+    else:
+        databases = {app.config["PRIMARY_DATABASE"]: database}
+        pm_db = database
+    app.extensions["cache"] = get_cache(app.config)
+    app.extensions["databases"] = databases
+    app.extensions["pm_db"] = pm_db
+    app.extensions["user_service"] = UserService(pm_db)
 
     # Keep these aliases for code that imports the Flask application directly.
-    app.db = database
+    app.db = pm_db
     app.blacklisted_tokens = app.extensions["blacklisted_tokens"]
 
 

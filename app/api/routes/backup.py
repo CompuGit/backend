@@ -5,7 +5,7 @@ from flask_jwt_extended import jwt_required
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 
-from app.database.backup_factory import BackupFactory
+from app.database import BackupFactory
 from app.core.logging import logger
 
 backup_bp = Blueprint('backup', __name__)

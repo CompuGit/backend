@@ -2,14 +2,77 @@ import os
 import subprocess
 import tempfile
 import shutil
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+from typing import Dict, Any, List
 import pymongo
 from bson import json_util
 import json
 
 from app.core.logging import logger
+from app.database.interface import DatabaseInterface
 
+
+class MongoDBConnection(DatabaseInterface):
+    def __init__(self, config=None):
+        self.client = None
+        self.db = None
+        self.users_collection = None
+        self.db_type = "mongodb"
+        settings = config or {}
+        self.uri = settings.get("DB_URI")
+        if not self.uri:
+            host = settings.get("DB_HOST", "localhost")
+            port = int(settings.get("DB_PORT") or 27017)
+            self.uri = f"mongodb://{host}:{port}"
+        self.db_name = settings.get("DB_NAME", "compugit")
+        self.username = settings.get("DB_USERNAME")
+        self.password = settings.get("DB_PASSWORD")
+
+    @property
+    def native(self):
+        return self.db
+
+    def connect(self) -> None:
+        try:
+            client_kwargs = {}
+            if self.username and self.password:
+                client_kwargs["username"] = self.username
+                client_kwargs["password"] = self.password
+
+            self.client = pymongo.MongoClient(self.uri, **client_kwargs)
+            self.db = self.client[self.db_name]
+            self.users_collection = self.db.users
+            self.counters_collection = self.db.counters
+            self.users_collection.create_index([("email", pymongo.ASCENDING)], unique=True)
+            self.users_collection.create_index([("userName", pymongo.ASCENDING)], unique=True)
+            self.users_collection.create_index([("userId", pymongo.ASCENDING)], unique=True)
+            self.counters_collection.update_one(
+                {"_id": "userId"},
+                {"$setOnInsert": {"sequence_value": 10001}},
+                upsert=True,
+            )
+            self.client.admin.command("ping")
+            logger.info("Successfully connected to MongoDB")
+            
+        except Exception as e:
+            logger.error("MongoDB connection failed: %s", str(e))
+            raise
+
+    def disconnect(self) -> None:
+        if self.client:
+            self.client.close()
+            self.client = None
+            self.db = None
+            self.users_collection = None
+            logger.info("MongoDB connection closed")
+
+    def is_connected(self) -> bool:
+        if self.client:
+            try:
+                self.client.admin.command("ping")
+                return True
+            except Exception:
+                return False
+        return False
 
 def check_mongodb_tools() -> Dict[str, bool]:
     """
@@ -86,16 +149,11 @@ class MongoDBBackup:
             password: MongoDB password
             validate_tools: Whether to validate MongoDB tools availability on init
         """
-        self.host = host or os.getenv('DB_HOST', 'localhost')
-        self.port = port or int(os.getenv('DB_PORT', '27017'))
-        self.database = database or os.getenv('DB_NAME', 'compugit')
-        self.username = username or os.getenv('DB_USERNAME')
-        self.password = password or os.getenv('DB_PASSWORD')
-        
-        # Extract host and port from URI if provided
-        db_uri = os.getenv('DB_URI')
-        if db_uri and not host and not port:
-            self._parse_uri(db_uri)
+        self.host = host or 'localhost'
+        self.port = port or 27017
+        self.database = database or 'compugit'
+        self.username = username
+        self.password = password
         
         # Check if MongoDB tools are available
         if validate_tools:
@@ -328,16 +386,11 @@ class MongoDBRestore:
             password: MongoDB password
             validate_tools: Whether to validate MongoDB tools availability on init
         """
-        self.host = host or os.getenv('DB_HOST', 'localhost')
-        self.port = port or int(os.getenv('DB_PORT', '27017'))
-        self.database = database or os.getenv('DB_NAME', 'compugit')
-        self.username = username or os.getenv('DB_USERNAME')
-        self.password = password or os.getenv('DB_PASSWORD')
-        
-        # Extract host and port from URI if provided
-        db_uri = os.getenv('DB_URI')
-        if db_uri and not host and not port:
-            self._parse_uri(db_uri)
+        self.host = host or 'localhost'
+        self.port = port or 27017
+        self.database = database or 'compugit'
+        self.username = username
+        self.password = password
         
         # Check if MongoDB tools are available
         if validate_tools:

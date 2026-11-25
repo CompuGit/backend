@@ -15,7 +15,7 @@ def get_profile():
         current_user = current_identity()
         db = current_app.extensions["user_service"]
 
-        if db.supports('get_user_by_email_or_username_or_userId'):
+        if db.supports('get_user'):
             user_data = db.get_user(current_user)
             if not user_data:
                 return jsonify({
@@ -52,7 +52,7 @@ def list_users():
     try:
         users_list = []
         db = current_app.extensions["user_service"]
-        if db.supports('get_all_users'):
+        if db.supports('list_users'):
             for u in db.list_users(filters=filters):
                 if u['userId'] == 10000 or u.get('userName','').lower() == 'admin':
                     continue  # Skip admin user
@@ -84,7 +84,7 @@ def get_user(userId:int):
     try:
         db = current_app.extensions["user_service"]
         
-        if db.supports('get_user_by_email_or_username_or_userId'):
+        if db.supports('get_user'):
             user_data = db.get_user(userId)
             if not user_data:
                 return jsonify({
@@ -136,7 +136,7 @@ def update_user(userId:int):
 
         db = current_app.extensions["user_service"]
         
-        if db.supports('get_user_by_email_or_username_or_userId') and db.supports('update_user'):
+        if db.supports('get_user') and db.supports('update_user'):
             # First check if user exists
             existing_user = db.get_user(userId)
             if not existing_user:
@@ -182,7 +182,7 @@ def delete_user(userId:int):
     try:
         db = current_app.extensions["user_service"]
         
-        if db.supports('get_user_by_email_or_username_or_userId') and db.supports('delete_user'):
+        if db.supports('get_user') and db.supports('delete_user'):
             # First check if user exists
             existing_user = db.get_user(userId)
             if not existing_user:
@@ -248,7 +248,7 @@ def create_user():
 
         db = current_app.extensions["user_service"]
         
-        if db.supports('get_user_by_email_or_username_or_userId') and db.supports('create_user'):
+        if db.supports('get_user') and db.supports('create_user'):
             # Check if user already exists
             existing_user = db.get_user(userName)
             if existing_user:

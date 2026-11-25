@@ -24,9 +24,9 @@ def register():
         password = data['password']
 
         # Prefer configured database; fallback to in-memory store for development
-        db = current_app.extensions["database"]
+        db = current_app.extensions["user_service"]
         if db:
-            existing = db.get_user_by_email_or_username_or_userId(userName)
+            existing = db.get_user(userName)
             if existing:
                 logger.error("User already exists: %s", userName)
                 return jsonify({
@@ -73,9 +73,9 @@ def login():
         userName = data['username'].lower().strip()
         password = data['password']
 
-        db = current_app.extensions["database"]
+        db = current_app.extensions["user_service"]
         if db:
-            user = db.get_user_by_email_or_username_or_userId(userName)
+            user = db.get_user(userName)
 
             if not user or user.get('canLogin') is False:
                 logger.error("Login attempt for non-existent or disabled user: %s", userName)
@@ -194,9 +194,9 @@ def change_password():
             }), 400
 
         current_user = current_identity()
-        db = current_app.extensions["database"]
+        db = current_app.extensions["user_service"]
         if db:
-            user = db.get_user_by_email_or_username_or_userId(current_user)
+            user = db.get_user(current_user)
 
             if not user or not check_password_hash(user['password_hash'], data['oldPassword']):
                 logger.error("Invalid current password for user: %s", current_user)
@@ -206,7 +206,7 @@ def change_password():
                 }), 401
 
             new_password_hash = generate_password_hash(data['newPassword'])
-            db.update_user(user['userId'],{'password_hash': new_password_hash})
+            db.update_user(user.get('userId', current_user), {'password_hash': new_password_hash})
 
             logger.info("Password changed successfully for user: %s", current_user)
             return jsonify({
