@@ -1,0 +1,92 @@
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+        "400":
+          description: Required fields are missing
+        "409":
+          description: Username is already registered
+        "503":
+          description: Registration is unavailable
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in and issue access and refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+        "400":
+          description: Credentials are missing
+        "401":
+          description: Credentials are invalid or the user cannot log in
+        "503":
+          description: Login is unavailable
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Issue a new access token
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Access token refreshed
+        "401":
+          description: Refresh token is invalid or revoked
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current access token
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                  description: Optional refresh token to revoke as well
+      responses:
+        "200":
+          description: Logout completed
+        "401":
+          description: Access token is missing or invalid
+  /auth/pwupdate:
+    post:
+      tags: [Authentication]
+      summary: Change the current user's password
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordUpdateRequest"
+      responses:
+        "200":
+          description: Password changed
+        "400":
+          description: Required fields are missing
+        "401":
+          description: Current password is incorrect
+        "503":
+          description: Password changes are unavailable

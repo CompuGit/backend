@@ -1,0 +1,41 @@
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: Get the service welcome message
+      responses:
+        "200":
+          description: Service welcome message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Welcome"
+  /health/:
+    get:
+      tags: [Health]
+      summary: Get the service welcome message
+      responses:
+        "200":
+          description: Service welcome message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Welcome"
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Check whether the service is alive
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: alive
+                  timestamp:
+                    type: string
+                    format: date-time

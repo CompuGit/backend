@@ -1,0 +1,136 @@
+paths:
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Users returned
+        "401":
+          description: Access token is missing or invalid
+        "501":
+          description: User listing is not supported
+    post:
+      tags: [Users]
+      summary: Create a user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+        "400":
+          description: Request body or required fields are missing
+        "409":
+          description: User already exists
+        "501":
+          description: User creation is not supported
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get the current user's profile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User profile returned
+        "401":
+          description: Access token is missing or invalid
+        "404":
+          description: User profile not found
+        "501":
+          description: Profile retrieval is not supported
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Users]
+      summary: Get a user by ID
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User returned
+        "401":
+          description: Access token is missing or invalid
+        "404":
+          description: User not found
+        "501":
+          description: User retrieval is not supported
+    put:
+      tags: [Users]
+      summary: Update a user by ID
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: User updated
+        "400":
+          description: Request body is missing
+        "401":
+          description: Access token is missing or invalid
+        "404":
+          description: User not found
+        "501":
+          description: User updates are not supported
+    patch:
+      tags: [Users]
+      summary: Partially update a user by ID
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: User updated
+        "400":
+          description: Request body is missing
+        "401":
+          description: Access token is missing or invalid
+        "404":
+          description: User not found
+        "501":
+          description: User updates are not supported
+    delete:
+      tags: [Users]
+      summary: Delete a user by ID
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User deleted
+        "401":
+          description: Access token is missing or invalid
+        "404":
+          description: User not found
+        "501":
+          description: User deletion is not supported

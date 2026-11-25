@@ -1,0 +1,195 @@
+paths:
+  /backup:
+    get:
+      tags: [Backup]
+      summary: Download a full database backup
+      description: Requires MongoDB database tools on the server.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BackupLimit"
+        - $ref: "#/components/parameters/BackupSkip"
+        - $ref: "#/components/parameters/BackupStartDate"
+        - $ref: "#/components/parameters/BackupEndDate"
+        - $ref: "#/components/parameters/BackupQuery"
+      responses:
+        "200":
+          description: Compressed database backup
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid backup filters
+        "401":
+          description: Access token is missing or invalid
+        "503":
+          description: MongoDB database tools are unavailable
+  /backup/{collection}:
+    get:
+      tags: [Backup]
+      summary: Download a collection backup
+      description: Requires MongoDB database tools on the server.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/BackupLimit"
+        - $ref: "#/components/parameters/BackupSkip"
+        - $ref: "#/components/parameters/BackupStartDate"
+        - $ref: "#/components/parameters/BackupEndDate"
+        - $ref: "#/components/parameters/BackupQuery"
+      responses:
+        "200":
+          description: Compressed collection backup
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid collection name or backup filters
+        "401":
+          description: Access token is missing or invalid
+        "503":
+          description: MongoDB database tools are unavailable
+  /backup/dbinfo:
+    get:
+      tags: [Backup]
+      summary: Get database and collection information
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Database information returned
+        "401":
+          description: Access token is missing or invalid
+        "500":
+          description: Database information could not be retrieved
+  /backup/restore:
+    post:
+      tags: [Backup]
+      summary: Restore a full database backup
+      description: Requires MongoDB database tools on the server.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [restore_file]
+              properties:
+                restore_file:
+                  type: string
+                  format: binary
+                drop_existing:
+                  type: string
+                  description: Optional form value controlling whether existing data is dropped
+      responses:
+        "200":
+          description: Database restored
+        "400":
+          description: Missing or invalid backup file
+        "401":
+          description: Access token is missing or invalid
+        "503":
+          description: MongoDB database tools are unavailable
+  /backup/restore/{collection}:
+    post:
+      tags: [Backup]
+      summary: Restore a collection backup
+      description: Requires MongoDB database tools on the server.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [restore_file]
+              properties:
+                restore_file:
+                  type: string
+                  format: binary
+                drop_existing:
+                  type: string
+                  description: Optional form value controlling whether existing data is dropped
+      responses:
+        "200":
+          description: Collection restored
+        "400":
+          description: Invalid collection name or missing or invalid backup file
+        "401":
+          description: Access token is missing or invalid
+        "503":
+          description: MongoDB database tools are unavailable
+  /backup/status:
+    get:
+      tags: [Backup]
+      summary: Check backup and restore service status
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Backup service is operational
+        "401":
+          description: Access token is missing or invalid
+        "503":
+          description: MongoDB database tools are unavailable
+        "500":
+          description: Backup service is not available
+components:
+  parameters:
+    BackupLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+      description: Maximum number of documents to include
+    BackupSkip:
+      name: skip
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+      description: Number of documents to skip
+    BackupStartDate:
+      name: start_date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+      description: Include documents created on or after this ISO 8601 date
+    BackupEndDate:
+      name: end_date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+      description: Include documents created on or before this ISO 8601 date
+    BackupQuery:
+      name: query
+      in: query
+      required: false
+      schema:
+        type: string
+      description: JSON object containing additional MongoDB query filters
