@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app import create_app
 
-os.environ.setdefault("APP_NAME", os.getenv("APP_NAME", "Compugit_Python_REST_API"))
+os.environ.setdefault("APP_NAME", os.getenv("APP_NAME", "Compugit PyREST"))
 version_file = Path(__file__).with_name("VERSION")
 os.environ.setdefault("VERSION", os.getenv("VERSION", version_file.read_text().strip()))
 

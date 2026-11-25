@@ -1,4 +1,4 @@
-# Flask REST API starter
+# Compugit PyREST
 
 A reusable Flask foundation for REST APIs. It includes an application factory,
 named database adapters, JWT authentication, database-backed role checks,
