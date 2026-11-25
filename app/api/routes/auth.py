@@ -8,7 +8,7 @@ from flask_jwt_extended import (
 from werkzeug.exceptions import ServiceUnavailable
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app.core.auth.n import current_identity
+from app.core.auth.authN import current_identity
 from app.core.auth.passwords import password_validation_error
 from app.api.services.users import DuplicateIdentityError
 from app.core.logging import logger

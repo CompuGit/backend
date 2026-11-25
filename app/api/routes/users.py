@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 from app.api.services.users import DuplicateIdentityError
 from app.core.auth.passwords import password_validation_error
-from app.core.auth.z import requires_roles
+from app.core.auth.authZ import requires_roles
 from app.core.logging import logger
 
 users_bp = Blueprint("users", __name__)

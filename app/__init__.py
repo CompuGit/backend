@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash
 from app.api.routes import register_bp_routes
 from app.api.services.users import UserService
 from app.config import AppSettings, _positive_duration_seconds
-from app.core.auth.n import register_authentication_callbacks
+from app.core.auth.authN import register_authentication_callbacks
 from app.core.auth.passwords import password_validation_error
 from app.core.cache import JsonCache
 from app.core.errors import register_error_handlers
