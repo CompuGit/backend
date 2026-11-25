@@ -1,34 +1,39 @@
 from flask import Flask, jsonify
+from werkzeug.exceptions import HTTPException
+
+from app.core.logging import logger
+
+
+HTTP_ERROR_MESSAGES = {
+    400: ("Bad request", "The request could not be understood"),
+    401: ("Unauthorized", "Authentication is required"),
+    403: ("Forbidden", "You do not have permission to perform this action"),
+    404: ("Not found", "The requested resource was not found"),
+    405: ("Method not allowed", "The method is not allowed for this resource"),
+    413: ("Payload too large", "The request payload is too large"),
+    429: ("Too many requests", "Please wait before retrying"),
+    503: ("Service unavailable", "A required service is temporarily unavailable"),
+}
 
 
 def register_error_handlers(app: Flask) -> None:
-    @app.errorhandler(400)
-    def bad_request(error):
-        return jsonify({"error": "Bad request", "message": str(error)}), 400
+    @app.errorhandler(HTTPException)
+    def handle_http_error(error: HTTPException):
+        title, message = HTTP_ERROR_MESSAGES.get(
+            error.code or 500,
+            ("Request failed", "The request could not be completed"),
+        )
+        return jsonify({"error": title, "message": message}), error.code or 500
 
-    @app.errorhandler(401)
-    def unauthorized(_error):
-        return jsonify(
-            {"error": "Unauthorized", "message": "Authentication required"}
-        ), 401
-
-    @app.errorhandler(403)
-    def forbidden(_error):
-        return jsonify(
-            {"error": "Forbidden", "message": "Insufficient permissions"}
-        ), 403
-
-    @app.errorhandler(404)
-    def not_found(_error):
-        return jsonify(
-            {"error": "Not found", "message": "Resource not found"}
-        ), 404
-
-    @app.errorhandler(500)
-    def internal_error(_error):
-        return jsonify(
-            {
-                "error": "Internal server error",
-                "message": "Something went wrong",
-            }
-        ), 500
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(error: Exception):
+        logger.exception("Unhandled request error", exc_info=error)
+        return (
+            jsonify(
+                {
+                    "error": "Internal server error",
+                    "message": "The request could not be completed",
+                }
+            ),
+            500,
+        )

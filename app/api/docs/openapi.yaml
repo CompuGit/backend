@@ -34,13 +34,19 @@ components:
           type: string
     RegisterRequest:
       type: object
-      required: [userName, password]
+      required: [userName, email, password]
       properties:
         userName:
           type: string
+          maxLength: 80
+        email:
+          type: string
+          format: email
         password:
           type: string
           format: password
+          minLength: 12
+      additionalProperties: false
     LoginRequest:
       type: object
       required: [username, password]
@@ -62,10 +68,22 @@ components:
           format: password
     CreateUserRequest:
       type: object
-      required: [userName, canLogin]
+      required: [userName, email, password]
       properties:
         userName:
           type: string
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 12
+        roles:
+          type: array
+          items:
+            type: string
         canLogin:
           type: boolean
-      additionalProperties: true
+      additionalProperties: false

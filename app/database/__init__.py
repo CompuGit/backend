@@ -83,7 +83,8 @@ def _connection_definitions(
     definitions = []
     for name, raw_settings in databases.items():
         db_type = str(raw_settings.get("type", "")).strip().lower()
-        definitions.append((name, db_type, _connection_settings(db_type, raw_settings)))
+        connection_settings = _connection_settings(db_type, raw_settings)
+        definitions.append((name, db_type, connection_settings))
 
     persistent_names = {name for name, _, _ in definitions}
     if not persistent_names:
@@ -183,10 +184,14 @@ class DatabaseFactory:
         cls, config: Optional[Mapping[str, Any]] = None
     ) -> Dict[str, Any]:
         settings = config or {}
-        definitions, _ = _connection_definitions(settings)
+        definitions, primary = _connection_definitions(settings)
         connections: Dict[str, DatabaseInterface] = {}
         try:
             for name, _, connection_settings in definitions:
+                connection_settings["AUTO_CREATE_SCHEMA"] = (
+                    name == primary
+                    and bool(settings.get("AUTO_CREATE_SCHEMA", True))
+                )
                 connections[name] = cls.create_connection(connection_settings)
             return connections
         except Exception:

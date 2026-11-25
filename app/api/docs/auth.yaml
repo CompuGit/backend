@@ -13,11 +13,13 @@ paths:
         "201":
           description: User registered
         "400":
-          description: Required fields are missing
+          description: Invalid request or password
+        "403":
+          description: Public registration is disabled
+        "429":
+          description: Registration rate limit exceeded
         "409":
-          description: Username is already registered
-        "503":
-          description: Registration is unavailable
+          description: Username or email is already registered
   /auth/login:
     post:
       tags: [Authentication]
@@ -34,9 +36,11 @@ paths:
         "400":
           description: Credentials are missing
         "401":
-          description: Credentials are invalid or the user cannot log in
+          description: Credentials are invalid
+        "429":
+          description: Login rate limit exceeded
         "503":
-          description: Login is unavailable
+          description: Authentication service is unavailable
   /auth/refresh:
     post:
       tags: [Authentication]
@@ -45,28 +49,18 @@ paths:
         - BearerAuth: []
       responses:
         "200":
-          description: Access token refreshed
+          description: Access and rotated refresh tokens issued
         "401":
           description: Refresh token is invalid or revoked
   /auth/logout:
     post:
       tags: [Authentication]
-      summary: Revoke the current access token
+      summary: Revoke all sessions for the current user
       security:
         - BearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                refresh_token:
-                  type: string
-                  description: Optional refresh token to revoke as well
       responses:
         "200":
-          description: Logout completed
+          description: All sessions revoked
         "401":
           description: Access token is missing or invalid
   /auth/pwupdate:
@@ -85,8 +79,8 @@ paths:
         "200":
           description: Password changed
         "400":
-          description: Required fields are missing
+          description: Invalid request or new password
         "401":
           description: Current password is incorrect
         "503":
-          description: Password changes are unavailable
+          description: Authentication state is unavailable

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, jsonify
 
@@ -26,6 +26,21 @@ def health_check():
     return jsonify(
         {
             "message": "alive",
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     ), 200
+
+
+@health_bp.route("/ready", methods=["GET"])
+def readiness_check():
+    databases = current_app.extensions["databases"]
+    try:
+        if not all(database.is_connected() for database in databases.values()):
+            return jsonify({"status": "not_ready"}), 503
+        redis_client = current_app.extensions["redis"]
+        if redis_client is not None:
+            redis_client.ping()
+    except Exception:
+        logger.exception("Readiness check failed")
+        return jsonify({"status": "not_ready"}), 503
+    return jsonify({"status": "ready"}), 200

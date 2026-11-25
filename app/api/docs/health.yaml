@@ -39,3 +39,12 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Check whether configured dependencies are ready
+      responses:
+        "200":
+          description: Service dependencies are ready
+        "503":
+          description: One or more configured dependencies are unavailable

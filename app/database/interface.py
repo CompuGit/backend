@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager
 from typing import Any
 
 class DatabaseInterface(ABC):
@@ -23,4 +24,8 @@ class DatabaseInterface(ABC):
     @abstractmethod
     def is_connected(self) -> bool:
         """Check if database is connected"""
+        raise NotImplementedError
+
+    def session_scope(self) -> AbstractContextManager[Any]:
+        """Return a short-lived relational session context when supported."""
         raise NotImplementedError

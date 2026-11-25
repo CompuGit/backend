@@ -1,6 +1,8 @@
-from typing import Optional, Dict, Any
-from sqlalchemy import create_engine
-from sqlalchemy import text
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Dict, Generator, Optional
+
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,8 +16,8 @@ class RDBConnection(DatabaseInterface):
     def __init__(self, config=None):
         self.engine = None
         self.Session = None
-        self._session = None
         settings = config or {}
+        self.auto_create_schema = bool(settings.get("AUTO_CREATE_SCHEMA", True))
         self.db_type = str(settings.get("DB_TYPE", "")).lower()
         if self.db_type not in {"postgresql", "mysql", "sqlite"}:
             raise ValueError(f"Unsupported relational database type: {self.db_type}")
@@ -40,9 +42,6 @@ class RDBConnection(DatabaseInterface):
             default_port = DEFAULT_DB_PORT_BY_TYPE[self.db_type]
             username = settings.get("DB_USERNAME")
             password = settings.get("DB_PASSWORD")
-            if self.db_type == "postgresql":
-                username = username or "postgres"
-                password = password or "postgres"
             self.db_url = URL.create(
                 drivername=(
                     "postgresql+psycopg2"
@@ -55,33 +54,61 @@ class RDBConnection(DatabaseInterface):
                 port=int(settings.get("DB_PORT") or default_port),
                 database=db_name,
             )
+        if self.db_type == "sqlite":
+            sqlite_path = self.db_url.database
+            if (
+                sqlite_path
+                and sqlite_path != ":memory:"
+                and not str(sqlite_path).startswith("file:")
+            ):
+                Path(sqlite_path).expanduser().resolve().parent.mkdir(
+                    parents=True, exist_ok=True
+                )
 
     @property
     def native(self):
-        return self._session
+        return self.engine
+
+    @contextmanager
+    def session_scope(self) -> Generator[Any, None, None]:
+        if self.Session is None:
+            raise RuntimeError("Database is not connected")
+        session = self.Session()
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def execute_sql(self, statement: str, parameters: Optional[Dict[str, Any]] = None):
-        if self._session is None:
+        if self.engine is None:
             raise RuntimeError("Database is not connected")
-        return self._session.execute(text(statement), parameters or {})
+        with self.engine.begin() as connection:
+            result = connection.execute(text(statement), parameters or {})
+            if result.returns_rows:
+                return result.mappings().all()
+            return result.rowcount
 
     def connect(self) -> None:
         try:
-            self.engine = create_engine(self.db_url)
-            Base.metadata.create_all(self.engine)
-            self.Session = sessionmaker(bind=self.engine)
-            self._session = self.Session()
+            engine_options: Dict[str, Any] = {"pool_pre_ping": True}
+            if self.db_type == "sqlite":
+                engine_options["connect_args"] = {"check_same_thread": False, "timeout": 30}
+            self.engine = create_engine(self.db_url, **engine_options)
+            if self.auto_create_schema:
+                Base.metadata.create_all(self.engine)
+            self.Session = sessionmaker(bind=self.engine, expire_on_commit=False)
             logger.info("Successfully connected to %s", self.db_type)
         except Exception as e:
             logger.error("%s connection failed: %s", self.db_type, str(e))
             raise
 
     def disconnect(self) -> None:
-        if self._session:
-            self._session.close()
         if self.engine:
             self.engine.dispose()
-        self._session = None
+        self.Session = None
         self.engine = None
         logger.info("%s connection closed", self.db_type)
 
